@@ -1,0 +1,31 @@
+# trustabl.policy_drift
+#
+# One of Trustabl's v0.1 runtime rules. This file is DATA, not code — it is
+# never loaded, parsed, or evaluated by the `trustabl` binary. It is written
+# so that a human (or, later, a translator tool) can mechanically turn it
+# into a vendor-native alert/monitor: see ../translations/grafana/ for the
+# first worked example.
+#
+# Shape defined in ../rule-ir-schema.yaml. Source: internal strategy memo
+# "Process metadata, portable rules, and a policy control plane" (30 Aug
+# 2026), §5.5.
+
+id: trustabl.policy_drift
+title: Policy bundle SHA changed during a run
+severity: high
+fix_class: policy.pin_bundle
+
+when:
+  span: execute_tool
+  window: same_run_id
+  condition:
+    value_drift: trustabl.policy.bundle_sha256
+    across: steps_in_run
+
+evidence:
+  - trustabl.policy.bundle_id
+  - trustabl.policy.bundle_sha256
+  - trustabl.run_id
+  - trustabl.step_index
+
+shadow: false

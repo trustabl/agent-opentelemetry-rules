@@ -1,0 +1,28 @@
+# trustabl.dspm_unbound
+#
+# One of Trustabl's v0.1 runtime rules. This file is DATA, not code — it is
+# never loaded, parsed, or evaluated by the `trustabl` binary. It is written
+# so that a human (or, later, a translator tool) can mechanically turn it
+# into a vendor-native alert/monitor: see ../translations/grafana/ for the
+# first worked example.
+#
+# Shape defined in ../rule-ir-schema.yaml. Source: internal strategy memo
+# "Process metadata, portable rules, and a policy control plane" (30 Aug
+# 2026), DSPM addendum §5.
+
+id: trustabl.dspm_unbound
+title: Required data-security binding missing on agent invocation
+severity: high
+fix_class: policy.require_bundle
+
+when:
+  span: invoke_agent
+  condition:
+    absent_binding_type: [data_security]
+
+evidence:
+  - trustabl.run_id
+  - trustabl.policy.bundle_id
+  - trustabl.exit_reason
+
+shadow: false

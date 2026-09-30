@@ -1,0 +1,7 @@
+{
+  "name": "trustabl.tool_loop",
+  "dataType": "BOOLEAN",
+  "minValue": 0,
+  "maxValue": 1,
+  "comment": "Same input_fp >= 3 in a 5-call window"
+}

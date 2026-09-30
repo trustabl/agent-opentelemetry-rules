@@ -1,0 +1,32 @@
+# trustabl.irreversible_unguarded
+#
+# One of Trustabl's v0.1 runtime rules. This file is DATA, not code — it is
+# never loaded, parsed, or evaluated by the `trustabl` binary. It is written
+# so that a human (or, later, a translator tool) can mechanically turn it
+# into a vendor-native alert/monitor: see ../translations/grafana/ for the
+# first worked example.
+#
+# Shape defined in ../rule-ir-schema.yaml. Source: internal strategy memo
+# "Process metadata, portable rules, and a policy control plane" (30 Aug
+# 2026), §5.5.
+
+id: trustabl.irreversible_unguarded
+title: Irreversible tool call with no constraint guard
+severity: critical
+fix_class: policy.require_constraint
+
+when:
+  span: execute_tool
+  condition:
+    all:
+      - field: trustabl.tool.side_effect
+        eq: irreversible
+      - absent: trustabl.constraint.kind
+
+evidence:
+  - gen_ai.tool.name
+  - trustabl.tool.side_effect
+  - trustabl.constraint.kind
+  - trustabl.step_index
+
+shadow: false

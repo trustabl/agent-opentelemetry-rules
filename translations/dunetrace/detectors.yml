@@ -1,0 +1,28 @@
+# Adapter: maps trustabl.tool_loop onto Dunetrace's OWN existing TOOL_LOOP
+# structural detector, via the fingerprint field.
+#
+# ILLUSTRATIVE, not verified against Dunetrace's real schema — this repo has
+# no access to Dunetrace's actual detectors.yml format. This file shows the
+# shape of the mapping the source memo describes (§5.6: "Dunetrace:
+# detectors.yml adapter mapping trustabl.tool_loop to TOOL_LOOP with the
+# fingerprint field"; §6.3: "Ship detectors.yml mapping"), not a schema
+# Dunetrace is confirmed to accept as-is.
+#
+# The intent (per §6.3 of the memo): Dunetrace already ships its own
+# zero-LLM TOOL_LOOP detector. Trustabl does not compete with it — this
+# adapter tells Dunetrace which of the ~20 trustabl.* attributes to key its
+# EXISTING detector on, so that detector becomes exact instead of
+# approximate on ingested OTLP.
+
+detectors:
+  - dunetrace_detector: TOOL_LOOP
+    trustabl_rule_id: trustabl.tool_loop
+    fingerprint_field: trustabl.tool.input_fp
+    window: last_5_tool_calls_in_run
+    threshold: 3
+    exclude_side_effect: none
+    severity: high
+    evidence:
+      - gen_ai.tool.name
+      - trustabl.tool.attempt
+      - trustabl.step_index

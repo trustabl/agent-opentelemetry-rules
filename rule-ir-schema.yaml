@@ -1,0 +1,152 @@
+# Trustabl Runtime Rule IR — v0.1 schema reference
+#
+# This file is DOCUMENTATION, not a runtime policy or a JSON Schema the
+# engine validates against — the same convention internal/rules/schema.yaml
+# uses for the static-analysis rule schema ("this file is documentation,
+# not runtime policy"). Nothing in the `trustabl` binary reads this file.
+#
+# A rule in this format is DATA describing a deterministic condition over
+# the payload-layer attribute profile (see attribute-profile.yaml). It is
+# evaluated by an observability backend (Grafana, Langfuse, Datadog, ...)
+# after being mechanically translated into that backend's native format —
+# never by the Trustabl scanner. See rules/tool_loop.yaml for a worked
+# example and translations/grafana/ for its Grafana translation.
+#
+# Source: internal strategy memo "Process metadata, portable rules, and a
+# policy control plane" (30 Aug 2026), §5.5.
+
+# ============================================================
+# Field reference
+# ============================================================
+fields:
+  id:
+    type: string
+    required: true
+    description: >
+      Globally unique rule identifier, dotted-namespace style
+      (e.g. trustabl.tool_loop). Unlike internal/rules' RuleDef.ID
+      (which uses SDK-prefixed IDs like CSDK-010), these IDs are not
+      scoped to an SDK — they describe a runtime behavior pattern
+      observable in any agent's trace data, regardless of which SDK
+      produced it.
+
+  title:
+    type: string
+    required: true
+    description: Short human-readable summary of what the rule detects.
+
+  severity:
+    type: string
+    required: true
+    enum: [critical, high, medium, low]
+    description: >
+      Same severity vocabulary and intent as internal/rules (see
+      testdata/rules-fixture/CLAUDE.md's severity guidance) — reused here
+      for consistency, not because the two schemas are related.
+
+  fix_class:
+    type: string
+    required: true
+    description: >
+      A short, stable tag naming the class of remediation this finding
+      implies (e.g. policy.cap_tool). Consumed by the Trustabl Policy
+      Control Plane's fix queue (memo §5.7) to route a pack hit toward a
+      scan rule, an enrich action, or compiler input — not evaluated by
+      any translation pack.
+
+  maps_to_static:
+    type: string
+    required: false
+    description: >
+      Optional, informational-only cross-reference to an existing
+      internal/rules static-analysis rule ID or concept name, when a
+      static analog exists. Not read by the engine; exists purely to help
+      a reader connect a runtime signal back to the pre-merge check that
+      tries to prevent it.
+
+  when.span:
+    type: string
+    required: true
+    description: >
+      The GenAI/OpenInference span operation this rule filters on
+      (e.g. execute_tool, invoke_agent). Uses the official
+      gen_ai.operation.name vocabulary — see attribute-profile.yaml's
+      payload_layer_1_skeleton.
+
+  when.window:
+    type: string
+    required: false
+    description: >
+      A human-readable window description (e.g. last_5_tool_calls_in_run).
+      Deliberately not a formal duration/count grammar in v0.1 — each
+      translation pack interprets this into its own native windowing
+      construct (e.g. Grafana TraceQL's [5m] range, a Langfuse score
+      lookback). See translations/grafana/README.md for a worked example
+      of that interpretation.
+
+  when.condition:
+    type: object
+    required: true
+    description: >
+      An open, per-rule vocabulary of condition fields (e.g. count_same,
+      gte, side_effect_not, error_class_in, rising_attempt). Unlike
+      internal/rules' MatchExpr, this is NOT a closed predicate enum
+      enforced by a loader — there is no engine here to enforce one
+      against. Each translation pack documents which condition shapes it
+      knows how to translate; a condition shape with no translation yet
+      simply isn't translatable until a pack adds support for it.
+
+  evidence:
+    type: array of string
+    required: true
+    description: >
+      Attribute/event names (from attribute-profile.yaml, or official
+      GenAI/OpenInference keys) to surface alongside a fired rule, so a
+      human reviewing a hit has the fields needed to confirm it without
+      re-querying the trace store.
+
+  shadow:
+    type: boolean
+    required: true
+    description: >
+      When true, the rule should be translated as record-without-alert
+      (e.g. a Grafana panel with no alert rule attached, or an alert rule
+      provisioned in a non-notifying state). Lets a rule be rolled out
+      and observed for false-positive rate before it pages anyone.
+
+# ============================================================
+# Annotated example (memo §5.5)
+# ============================================================
+example:
+  id: trustabl.tool_loop
+  title: Repeated tool call with identical arguments
+  severity: high
+  fix_class: policy.cap_tool
+  maps_to_static: TOOL_IDEMPOTENCY / LOOP_UNBOUNDED
+  when:
+    span: execute_tool
+    window: last_5_tool_calls_in_run
+    condition:
+      count_same: trustabl.tool.input_fp
+      gte: 3
+      side_effect_not: none
+  evidence: [gen_ai.tool.name, trustabl.tool.input_fp, trustabl.tool.attempt, trustabl.step_index]
+  shadow: false
+
+# ============================================================
+# v0 rules authored (files in rules/)
+# ============================================================
+authored:
+  - trustabl.tool_loop              # rules/tool_loop.yaml
+  - trustabl.retry_storm            # rules/retry_storm.yaml
+  - trustabl.policy_absent          # rules/policy_absent.yaml
+  - trustabl.policy_drift           # rules/policy_drift.yaml
+  - trustabl.contract_drift         # rules/contract_drift.yaml
+  - trustabl.irreversible_unguarded # rules/irreversible_unguarded.yaml
+  - trustabl.constraint_hit         # rules/constraint_hit.yaml  (shadow: true)
+  - trustabl.false_idempotent       # rules/false_idempotent.yaml
+  - trustabl.handoff_unbound        # rules/handoff_unbound.yaml
+  - trustabl.instrumentation_degraded # rules/instrumentation_degraded.yaml
+  # DSPM addendum (memo DSPM §5)
+  - trustabl.dspm_unbound           # rules/dspm_unbound.yaml
+  - trustabl.denied_then_answered   # rules/denied_then_answered.yaml

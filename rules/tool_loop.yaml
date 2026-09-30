@@ -1,0 +1,38 @@
+# trustabl.tool_loop
+#
+# One of Trustabl's v0.1 runtime rules. This file is DATA, not code — it is
+# never loaded, parsed, or evaluated by the `trustabl` binary. It is written
+# so that a human (or, later, a translator tool) can mechanically turn it
+# into a vendor-native alert/monitor: see ../translations/grafana/ for the
+# first worked example.
+#
+# Shape defined in ../rule-ir-schema.yaml. Source: internal strategy memo
+# "Process metadata, portable rules, and a policy control plane" (30 Aug
+# 2026), §5.5.
+
+id: trustabl.tool_loop
+title: Repeated tool call with identical arguments
+severity: high
+fix_class: policy.cap_tool
+
+# Optional cross-reference: the existing internal/rules static-analysis rule
+# this runtime signal corresponds to conceptually, if one exists. Informational
+# only — the engine does not read this field, and no schema_version bump is
+# implied by naming a static rule here.
+maps_to_static: TOOL_IDEMPOTENCY / LOOP_UNBOUNDED
+
+when:
+  span: execute_tool
+  window: last_5_tool_calls_in_run
+  condition:
+    count_same: trustabl.tool.input_fp
+    gte: 3
+    side_effect_not: none
+
+evidence:
+  - gen_ai.tool.name
+  - trustabl.tool.input_fp
+  - trustabl.tool.attempt
+  - trustabl.step_index
+
+shadow: false

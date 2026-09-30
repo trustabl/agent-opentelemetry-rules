@@ -1,0 +1,40 @@
+# trustabl.denied_then_answered
+#
+# One of Trustabl's v0.1 runtime rules. This file is DATA, not code — it is
+# never loaded, parsed, or evaluated by the `trustabl` binary. It is written
+# so that a human (or, later, a translator tool) can mechanically turn it
+# into a vendor-native alert/monitor: see ../translations/grafana/ for the
+# first worked example.
+#
+# Shape defined in ../rule-ir-schema.yaml. Source: internal strategy memo
+# "Process metadata, portable rules, and a policy control plane" (30 Aug
+# 2026), DSPM addendum §5 ("the actual incident: stuck, then made
+# something up").
+
+id: trustabl.denied_then_answered
+title: Constraint denied a retrieval step but agent gave a final answer without resolution
+severity: high
+fix_class: policy.require_constraint
+
+when:
+  span: invoke_agent
+  window: same_run_id
+  condition:
+    sequence:
+      - span: execute_tool
+        field: trustabl.constraint.decision
+        eq: deny
+      - span: invoke_agent
+        field: trustabl.exit_reason
+        eq: final_answer
+        no_intervening_allow_on_same_data_class: true
+
+evidence:
+  - trustabl.constraint.decision
+  - trustabl.constraint.kind
+  - trustabl.constraint.data_class
+  - trustabl.exit_reason
+  - trustabl.run_id
+  - trustabl.step_index
+
+shadow: false

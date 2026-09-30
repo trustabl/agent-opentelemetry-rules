@@ -1,0 +1,33 @@
+# trustabl.constraint_hit
+#
+# One of Trustabl's v0.1 runtime rules. This file is DATA, not code — it is
+# never loaded, parsed, or evaluated by the `trustabl` binary. It is written
+# so that a human (or, later, a translator tool) can mechanically turn it
+# into a vendor-native alert/monitor: see ../translations/grafana/ for the
+# first worked example.
+#
+# Shape defined in ../rule-ir-schema.yaml. Source: internal strategy memo
+# "Process metadata, portable rules, and a policy control plane" (30 Aug
+# 2026), §5.5.
+
+id: trustabl.constraint_hit
+title: Constraint fired and denied or limited a tool call
+severity: medium
+fix_class: policy.review_constraint
+
+when:
+  span: execute_tool
+  condition:
+    field: trustabl.constraint.decision
+    in: [deny, cap]
+
+evidence:
+  - trustabl.constraint.kind
+  - trustabl.constraint.decision
+  - trustabl.constraint.reason_code
+  - trustabl.constraint.binding_id
+  - gen_ai.tool.name
+
+# shadow: true — constraint fires are expected behavior, not a defect.
+# Record for visibility and trend analysis without generating an alert.
+shadow: true

@@ -1,0 +1,228 @@
+# Trustabl Agent Profile — v0.1 payload attribute + event reference
+#
+# This file is DOCUMENTATION/DATA, not code — nothing in the `trustabl`
+# binary reads it. It describes the OpenTelemetry span attributes and
+# events an instrumented agent (or a Collector transform) may emit on top
+# of the official GenAI / OpenInference semantic conventions, so that
+# runtime rules (see rules/) and their vendor translations (see
+# translations/) have a fixed vocabulary to key off of.
+#
+# Source: internal strategy memo "Process metadata, portable rules, and a
+# policy control plane" (30 Aug 2026), §5.2-5.2.3, plus the DSPM addendum.
+#
+# ============================================================
+# A note on "layer" — read this before using the word out loud
+# ============================================================
+# The memo's "Layer 1/2/3" describes PAYLOAD: what is physically present
+# on a span (skeleton / process+authority / content). This file uses that
+# axis, and names it explicitly as payload_layer_1/2/3 below.
+#
+# A separate, newer, and still-evolving axis inside the org also uses the
+# words "Layer 1/2/3" — for RAIL: who observed the event (in-process
+# emitter / a tool-and-data gateway such as ACS-Unity-Mosaic / the
+# OpenShell sandbox boundary). That is a different question ("who saw
+# this happen") from the one this file answers ("what did they write
+# down"), and this file does not model it. See
+# docs/decisions/runtime-rule-ir-scope.md in the agent-reliability-analyzer
+# engine repo for the full note.
+#
+# Always say "payload-L*" or "rail-L*" explicitly — never bare "Layer 2."
+
+payload_layer_1_skeleton:
+  description: >
+    The official OpenTelemetry GenAI semantic conventions and/or
+    OpenInference attribute set. Trustabl reuses these keys verbatim and
+    never redefines or shadows them (memo §2.1: "If the convention
+    already names a concept, Trustabl uses that key. We do not invent
+    trustabl.tool.name.").
+  default: always_present
+  scan_behavior: finding_if_absent
+  representative_keys:
+    - gen_ai.operation.name    # invoke_agent | chat | execute_tool | ...
+    - gen_ai.provider.name
+    - gen_ai.request.model
+    - gen_ai.agent.name
+    - gen_ai.agent.version
+    - gen_ai.conversation.id
+    - gen_ai.tool.name
+
+payload_layer_2_process_and_authority:
+  description: >
+    Trustabl-defined attributes carrying process structure and signed
+    authority — the profile this repo actually defines. Required on
+    hardened (compiler-issued) agents; commodity subset only on unsigned
+    agents (memo §11).
+  default: always_present_on_hardened_agents
+  attributes:
+    - name: trustabl.step_index
+      on_span: all run steps
+      type: integer
+      purpose: Order survives OTLP batch splits.
+
+    - name: trustabl.run_id
+      on_span: root
+      type: string
+      purpose: One user task.
+
+    - name: trustabl.tool.input_fp
+      on_span: execute_tool
+      type: string (16-hex-char fixed-length hash)
+      purpose: Sameness of canonical args.
+
+    - name: trustabl.tool.output_fp
+      on_span: execute_tool
+      type: string (16-hex-char fixed-length hash)
+      purpose: Observational idempotency.
+
+    - name: trustabl.tool.side_effect
+      on_span: execute_tool
+      type: enum
+      enum: [none, read, write, irreversible]
+      purpose: Side-effect class of the tool call.
+
+    - name: trustabl.tool.error_class
+      on_span: execute_tool
+      type: enum
+      enum: [timeout, 4xx, 5xx, empty, schema, auth]
+      purpose: Structured error class even when HTTP status looks fine.
+
+    - name: trustabl.tool.attempt
+      on_span: execute_tool
+      type: integer
+      purpose: Retry count.
+
+    - name: trustabl.policy.bundle_id
+      on_span: invoke_agent, sandbox root
+      type: string
+      purpose: Id of the signed set, if several artifacts are signed together.
+
+    - name: trustabl.policy.bundle_sha256
+      on_span: invoke_agent, sandbox root
+      type: string (sha256 hex)
+      purpose: Hash of the signed set, if we ship one manifest.
+
+    - name: trustabl.contract.id
+      on_span: invoke_agent, sandbox root
+      type: string
+      purpose: Name of the IR that generated the bound policy artifacts (example -- trustabl.runtime.v1).
+
+    - name: trustabl.contract.version
+      on_span: invoke_agent, sandbox root
+      type: string
+      purpose: Semver or git sha of the contract pack.
+
+    - name: trustabl.contract.sha256
+      on_span: invoke_agent, sandbox root
+      type: string (sha256 hex)
+      purpose: Hash of the bytes of the IR document that generated these policies.
+
+    - name: trustabl.constraint.kind
+      on_span: when a compiled limit applies
+      type: enum
+      enum: [cost, tool_class, side_effect, sandbox, content, rate, data_class]
+      purpose: Generic category of the compiled limit that applied.
+
+    - name: trustabl.constraint.id
+      on_span: when a compiled limit applies
+      type: string
+      purpose: Stable id of the compiled limit (e.g. spend.max_usd, tool.irreversible).
+
+    - name: trustabl.constraint.decision
+      on_span: when a compiled limit applies
+      type: enum
+      enum: [allow, deny, cap, approve, downgrade]
+      purpose: The generic authority decision made.
+
+    - name: trustabl.constraint.binding_id
+      on_span: when a compiled limit applies
+      type: string
+      purpose: Which policy in the bound set applied (e.g. OpenShell vs ACS).
+
+    - name: trustabl.constraint.sha256
+      on_span: when a compiled limit applies
+      type: string (sha256 hex)
+      purpose: Hash of the artifact that contained that limit.
+
+    - name: trustabl.constraint.reason_code
+      on_span: when a compiled limit applies
+      type: enum
+      enum: [CEILING, GRANT_MISSING, CLASS_EXCEEDED, NEED_UNPROVEN, CLASS_DETECTED]
+      purpose: >
+        Short mechanism enum. CEILING/GRANT_MISSING/CLASS_EXCEEDED are the
+        memo's original v0.1 set (§5.2.3); NEED_UNPROVEN and CLASS_DETECTED
+        are added by the DSPM addendum for the "need is proven" model.
+
+    - name: trustabl.constraint.data_class
+      on_span: when a compiled limit of kind=data_class applies
+      type: enum (optional, repeatable as an array or one event per class)
+      enum: [pii, phi_hipaa, pci, secrets, customer_confidential]
+      purpose: >
+        DSPM addendum. Stable taxonomy label only — process metadata
+        ("this step was about HIPAA"), never the sensitive value, row,
+        document, or snippet itself.
+
+    - name: trustabl.handoff_id
+      on_span: subagent
+      type: string
+      purpose: Multi-agent join key.
+
+    - name: trustabl.exit_reason
+      on_span: root end
+      type: enum
+      enum: [final_answer, max_steps, policy_stop, error]
+      purpose: Why the run ended.
+
+  events:
+    - name: trustabl.policy.binding
+      on_span: invoke_agent, sandbox root
+      repeatable: true
+      description: >
+        One event per bound policy artifact — the source of truth in
+        v0.1 for "which policies are in force on this agent." Emit one
+        event per rail; do NOT encode the set as parallel string arrays
+        (binding_ids, binding_types, binding_sha256s) — parallel arrays
+        flatten badly in Langfuse observations, Datadog facets, and
+        TraceQL (memo §5.2.1, reinforced by §11: "Encode bindings as
+        events, not parallel arrays."). Arrays may be added later as a
+        convenience projection; they are not the canonical shape.
+      fields:
+        - name: trustabl.policy.binding.id
+          type: string
+          example: openshell-seccomp-v3, acs-content-v8, dspm-prod-v2
+
+        - name: trustabl.policy.binding.type
+          type: enum
+          enum: [sandbox, content_safety, tool_grants, retention, custom, data_security]
+          note: >
+            data_security is the DSPM addendum's binding type — ACS-style
+            content safety governs model/dialog; DSPM governs stores,
+            retrieval, and classification. Do not reuse content_safety or
+            custom for it.
+
+        - name: trustabl.policy.binding.sha256
+          type: string (sha256 hex)
+          description: Hash of that artifact only — never a flattened multi-policy hash.
+
+        - name: trustabl.policy.binding.version
+          type: string
+
+        - name: trustabl.policy.binding.required
+          type: boolean
+          description: True if this agent class must carry this binding.
+
+        - name: trustabl.policy.binding.source
+          type: enum
+          enum: [entrypoint, inherited, sidecar, external]
+          note: >
+            Subagents list their own bindings; source=inherited is
+            allowed, but a handoff with no binding attributes at all is a
+            coverage hole, not an implicit copy of the parent (memo
+            §5.2.1). source=external marks a binding not generated from
+            the named contract (hand-written ACS, vendor default) — never
+            claim it came from an IR it didn't (memo §5.2.2).
+
+payload_layer_3_content:
+  description: >
+    Redacted excerpts or full gen_ai.input.messages, behind an explicit
+    flag and size cap. Off by default; out of scope for this slice.
+  default: off

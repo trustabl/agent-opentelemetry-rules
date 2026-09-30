@@ -1,0 +1,19 @@
+{
+  "name": "trustabl.tool_loop",
+  "type": "log alert",
+  "query": "logs(\"@gen_ai.operation.name:execute_tool\").index(\"*\").rollup(\"count\").by(\"@trustabl.tool.input_fp\",\"@gen_ai.agent.name\").last(\"5m\") > 3",
+  "message": "Repeated tool call with identical arguments (trustabl.tool_loop). Check @gen_ai.tool.name, @trustabl.tool.attempt, and @trustabl.step_index on the matching logs for evidence. maps_to_static: TOOL_IDEMPOTENCY / LOOP_UNBOUNDED",
+  "tags": [
+    "rule_id:trustabl.tool_loop",
+    "severity:high",
+    "fix_class:policy.cap_tool"
+  ],
+  "options": {
+    "thresholds": {
+      "critical": 3
+    },
+    "notify_no_data": false,
+    "renotify_interval": 0
+  },
+  "priority": 2
+}

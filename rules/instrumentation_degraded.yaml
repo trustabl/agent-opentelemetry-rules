@@ -1,0 +1,30 @@
+# trustabl.instrumentation_degraded
+#
+# One of Trustabl's v0.1 runtime rules. This file is DATA, not code — it is
+# never loaded, parsed, or evaluated by the `trustabl` binary. It is written
+# so that a human (or, later, a translator tool) can mechanically turn it
+# into a vendor-native alert/monitor: see ../translations/grafana/ for the
+# first worked example.
+#
+# Shape defined in ../rule-ir-schema.yaml. Source: internal strategy memo
+# "Process metadata, portable rules, and a policy control plane" (30 Aug
+# 2026), §5.5.
+
+id: trustabl.instrumentation_degraded
+title: execute_tool span missing required trustabl fingerprint attributes
+severity: medium
+fix_class: instrumentation.add_emitter
+
+when:
+  span: invoke_agent
+  condition:
+    all:
+      - present: gen_ai.agent.version
+      - absent: trustabl.step_index
+
+evidence:
+  - gen_ai.agent.name
+  - gen_ai.agent.version
+  - trustabl.run_id
+
+shadow: false
