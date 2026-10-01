@@ -15,7 +15,7 @@ data so any observability backend can evaluate it against live agent trace data.
   static-analysis rule pack repo. Those rules are pulled and evaluated
   *in-process* by the `trustabl` binary against source code it just parsed.
   The rules in this repository are evaluated by third-party observability
-  backends (Grafana, Langfuse, Datadog, …) against live OpenTelemetry trace
+  backends (Grafana, Langfuse, Datadog, OpenLIT, …) against live OpenTelemetry trace
   data — the `trustabl` binary is never in that loop.
 
 ## Layout
@@ -44,8 +44,12 @@ data so any observability backend can evaluate it against live agent trace data.
   - [`translations/phoenix/`](translations/phoenix/) — a Python span evaluator
     function. **Speculative** — shape inferred from Phoenix's evaluator API.
   - [`translations/langsmith/`](translations/langsmith/) — a saved-filter
-    query. **Most speculative of the six** — LangSmith's filter grammar
+    query. **Most speculative of the seven** — LangSmith's filter grammar
     cannot fully express the sliding-window condition in one filter.
+  - [`translations/openlit/`](translations/openlit/) — a ClickHouse SQL
+    detection query against OpenLIT's `otel_traces` table. Uses an exact
+    call-count window via `row_number()` — closer to the rule's intent than
+    the time-window approximation in the Grafana/Datadog packs.
 - [`scripts/`](scripts/) — `create-datadog-monitor.py`: translates any rule
   YAML into a Datadog composite monitor via the Monitors API.
 
