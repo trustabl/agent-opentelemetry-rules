@@ -1,0 +1,43 @@
+# Fails when a rule, the attribute profile or a translation uses a trustabl.* name
+# that spec/keys.json in agent-reliability-otel-labels does not define.
+name: check-names
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-names:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Use the labels branch of the same name when one exists (so a spec change and
+      # the rules change that needs it can be reviewed together), else main.
+      - name: Resolve agent-reliability-otel-labels ref
+        id: labelsref
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [ -n "$HEAD_REF" ] && git ls-remote --exit-code --heads \
+              https://github.com/trustabl/agent-reliability-otel-labels.git "$HEAD_REF" \
+              >/dev/null 2>&1; then
+            echo "ref=$HEAD_REF" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout agent-reliability-otel-labels
+        uses: actions/checkout@v4
+        with:
+          repository: trustabl/agent-reliability-otel-labels
+          ref: ${{ steps.labelsref.outputs.ref }}
+          path: .labels
+
+      - name: Check names against spec/keys.json
+        run: LABELS_REPO="$GITHUB_WORKSPACE/.labels" python3 scripts/check-otel-names.py

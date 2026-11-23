@@ -20,7 +20,7 @@ detectors:
     fingerprint_field: trustabl.tool.input_fp
     window: last_5_tool_calls_in_run
     threshold: 3
-    exclude_side_effect: none
+    exclude_side_effect: pure
     severity: high
     evidence:
       - gen_ai.tool.name

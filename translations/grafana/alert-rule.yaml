@@ -36,7 +36,7 @@ groups:
                 && span.trustabl.tool.input_fp != "" }[5m])
               # NOTE: this TraceQL string is transcribed verbatim from the
               # source memo's §5.6 sketch. It does not itself express
-              # when.condition.side_effect_not: none from the rule IR —
+              # when.condition.side_effect_not: pure from the rule IR —
               # see README.md's "What this translation does not capture yet"
               # section.
           - refId: C
@@ -62,7 +62,7 @@ groups:
           summary: "Repeated tool call with identical arguments"
           description: >-
             Same trustabl.tool.input_fp seen 3+ times in the last 5 tool
-            calls of a run, with a non-"none" side effect. See
+            calls of a run, with a non-"pure" side effect. See
             gen_ai.tool.name, trustabl.tool.attempt, and trustabl.step_index
             on the matching spans for evidence.
           maps_to_static: "TOOL_IDEMPOTENCY / LOOP_UNBOUNDED"

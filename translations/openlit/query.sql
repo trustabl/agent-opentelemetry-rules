@@ -30,7 +30,7 @@ WITH ranked AS (
   FROM otel.otel_traces
   WHERE
     SpanName = 'execute_tool'
-    AND SpanAttributes['trustabl.tool.side_effect'] != 'none'
+    AND SpanAttributes['trustabl.tool.side_effect'] != 'pure'
     AND SpanAttributes['trustabl.tool.input_fp']    != ''
     AND Timestamp >= now() - INTERVAL 10 MINUTE
 ),

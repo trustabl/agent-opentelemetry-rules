@@ -11,20 +11,26 @@
 # 2026), §5.5.
 
 id: trustabl.policy_drift
-title: Policy bundle SHA changed during a run
+title: Policy binding SHA changed during a run
 severity: high
 fix_class: policy.pin_bundle
 
+# The SDK emits bindings as trustabl.policy.binding EVENTS on invoke_agent
+# spans (spec/keys.json in agent-reliability-otel-labels), not as span
+# attributes on execute_tool spans. Two things are still open and need the
+# separate event-predicate proposal: reading an event field in a condition,
+# and comparing the sha256 per trustabl.policy.binding.id (without that, two
+# different bindings in one run would look like drift).
 when:
-  span: execute_tool
+  span: invoke_agent
   window: same_run_id
   condition:
-    value_drift: trustabl.policy.bundle_sha256
-    across: steps_in_run
+    value_drift: trustabl.policy.binding.sha256
+    across: invoke_agent_spans_in_run
 
 evidence:
-  - trustabl.policy.bundle_id
-  - trustabl.policy.bundle_sha256
+  - trustabl.policy.binding.id
+  - trustabl.policy.binding.sha256
   - trustabl.run_id
   - trustabl.step_index
 

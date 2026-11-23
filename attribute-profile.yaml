@@ -77,7 +77,7 @@ payload_layer_2_process_and_authority:
     - name: trustabl.tool.side_effect
       on_span: execute_tool
       type: enum
-      enum: [none, read, write, irreversible]
+      enum: [pure, read, write, irreversible]
       purpose: Side-effect class of the tool call.
 
     - name: trustabl.tool.error_class
@@ -91,16 +91,11 @@ payload_layer_2_process_and_authority:
       type: integer
       purpose: Retry count.
 
-    - name: trustabl.policy.bundle_id
-      on_span: invoke_agent, sandbox root
-      type: string
-      purpose: Id of the signed set, if several artifacts are signed together.
-
-    - name: trustabl.policy.bundle_sha256
-      on_span: invoke_agent, sandbox root
-      type: string (sha256 hex)
-      purpose: Hash of the signed set, if we ship one manifest.
-
+    # The contract.* and constraint.* attributes below are NOT emitted by the
+    # labels SDK and are not defined in its spec/keys.json (which reserves
+    # trustabl.contract_id and trustabl.contract_hash as resource attributes,
+    # and trustabl.constraint.id). Names are pending a decision by the tech
+    # leads; scripts/otel-names-allowlist.txt records each one.
     - name: trustabl.contract.id
       on_span: invoke_agent, sandbox root
       type: string

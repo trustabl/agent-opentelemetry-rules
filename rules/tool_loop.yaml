@@ -27,7 +27,7 @@ when:
   condition:
     count_same: trustabl.tool.input_fp
     gte: 3
-    side_effect_not: none
+    side_effect_not: pure
 
 evidence:
   - gen_ai.tool.name

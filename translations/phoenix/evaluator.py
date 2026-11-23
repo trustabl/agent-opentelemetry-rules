@@ -36,7 +36,7 @@ import pandas as pd
 RULE_ID = "trustabl.tool_loop"
 WINDOW_SIZE = 5     # approximates when.window: last_5_tool_calls_in_run
 THRESHOLD = 3        # when.condition.gte
-EXCLUDED_SIDE_EFFECT = "none"  # when.condition.side_effect_not
+EXCLUDED_SIDE_EFFECT = "pure"  # when.condition.side_effect_not
 
 
 def evaluate_tool_loop(spans_df: pd.DataFrame) -> pd.DataFrame:

@@ -22,7 +22,7 @@ when:
 
 evidence:
   - trustabl.run_id
-  - trustabl.policy.bundle_id
+  - gen_ai.agent.name
   - trustabl.exit_reason
 
 shadow: false
