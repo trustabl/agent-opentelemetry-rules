@@ -23,7 +23,7 @@ Phoenix's more commonly documented eval pattern.
 | Rule IR field (`tool_loop.yaml`) | This evaluator |
 |---|---|
 | `when.span: execute_tool` | Filters `spans_df` to `attributes.gen_ai.operation.name == "execute_tool"` |
-| `when.condition.side_effect_not: none` | Filters out rows where `attributes.trustabl.tool.side_effect == "none"` |
+| `when.condition.side_effect_not: pure` | Filters out rows where `attributes.trustabl.tool.side_effect == "pure"` |
 | `when.window: last_5_tool_calls_in_run` | Approximated via `.groupby(run_id).tail(5)` — a true count-based window per run, closer to the rule's actual intent than the time-window approximation used in the Grafana/Datadog packs, but still dependent on `trustabl.step_index` sort order being correct |
 | `when.condition.count_same: trustabl.tool.input_fp` | `.groupby([run_id, input_fp]).size()` |
 | `when.condition.gte: 3` | `THRESHOLD = 3` |

@@ -1,0 +1,15 @@
+# trustabl.* names this repo uses that the labels spec (spec/keys.json) does not define.
+# One per line: name  # reason (required). "prefix.*" covers a whole prefix.
+# An entry fails the check once keys.json defines the name, so stale entries get removed.
+
+trustabl.contract.id         # spec reserves trustabl.contract_id; name pending tech leads
+trustabl.contract.sha256     # spec reserves trustabl.contract_hash; name pending tech leads
+trustabl.contract.version    # not in spec, no producer decided; pending tech leads
+trustabl.constraint.kind     # not in spec, no producer (policy emitter); pending tech leads
+trustabl.constraint.decision # not in spec, no producer (policy emitter); pending tech leads
+trustabl.constraint.reason_code  # not in spec, no producer; pending tech leads
+trustabl.constraint.binding_id   # not in spec, no producer; pending tech leads
+trustabl.constraint.sha256       # not in spec, no producer; pending tech leads
+trustabl.constraint.data_class   # not in spec, no producer (DSPM); pending tech leads
+trustabl.runtime.v1          # example contract id value in profile prose, not an attribute
+trustabl.tool.name           # negative example in profile prose, not an attribute

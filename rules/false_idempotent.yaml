@@ -11,7 +11,7 @@
 # 2026), §5.5.
 
 id: trustabl.false_idempotent
-title: Tool claimed side_effect=none but produced different outputs for identical inputs
+title: Tool claimed side_effect=pure but produced different outputs for identical inputs
 severity: high
 fix_class: policy.audit_tool
 
@@ -24,7 +24,7 @@ when:
   window: same_run_id
   condition:
     same_input_fp_different_output_fp: true
-    side_effect: none
+    side_effect: pure
 
 evidence:
   - gen_ai.tool.name

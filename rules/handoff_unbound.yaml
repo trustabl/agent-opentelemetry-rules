@@ -11,7 +11,7 @@
 # 2026), §5.5.
 
 id: trustabl.handoff_unbound
-title: Agent handoff occurred with no policy bundle on the receiving agent
+title: Agent handoff occurred with no policy binding on the receiving agent
 severity: high
 fix_class: policy.require_bundle_on_handoff
 
@@ -20,7 +20,10 @@ when:
   condition:
     all:
       - present: trustabl.handoff_id
-      - absent: trustabl.policy.bundle_id
+      # No trustabl.policy.binding event of any type on the span. Read
+      # absent_binding_type as "none of these types is present".
+      - absent_binding_type:
+          [sandbox, content_safety, tool_grants, retention, data_security, custom]
 
 evidence:
   - trustabl.handoff_id

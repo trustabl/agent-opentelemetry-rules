@@ -21,7 +21,7 @@ to make the query a submittable monitor rather than a bare query fragment.
 | `fix_class` | `tags: ["fix_class:policy.cap_tool"]` |
 | `evidence` | Named in `message` as what to check on a firing log |
 
-Same omission as the Grafana translation: `when.condition.side_effect_not: none`
+Same omission as the Grafana translation: `when.condition.side_effect_not: pure`
 is not expressed in the query — filtering by `@trustabl.tool.side_effect`
 would need an additional clause the memo's own sketch doesn't include either.
 

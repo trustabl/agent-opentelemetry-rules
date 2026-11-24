@@ -10,7 +10,7 @@ so the translation is a SQL query against `otel.otel_traces`.
 | Rule IR field (`tool_loop.yaml`) | This query |
 |---|---|
 | `when.span: execute_tool` | `WHERE SpanName = 'execute_tool'` |
-| `when.condition.side_effect_not: none` | `AND SpanAttributes['trustabl.tool.side_effect'] != 'none'` |
+| `when.condition.side_effect_not: pure` | `AND SpanAttributes['trustabl.tool.side_effect'] != 'pure'` |
 | `when.window: last_5_tool_calls_in_run` | `row_number() OVER (PARTITION BY run_id ORDER BY step_index DESC)` sliced to `rn <= 5` — an **exact** call-count window, not a time-window approximation |
 | `when.condition.count_same: trustabl.tool.input_fp` | `GROUP BY run_id, input_fp` + `count(*)` |
 | `when.condition.gte: 3` | `WHERE call_count >= 3` |

@@ -58,9 +58,9 @@ TraceQL form and trigger on `B threshold > 2` against a reduce expression.
 
 ## What this translation does not capture yet
 
-- **`when.condition.side_effect_not: none`** is not expressed in the
+- **`when.condition.side_effect_not: pure`** is not expressed in the
   TraceQL query — the memo's own §5.6 sketch doesn't encode it either. A
-  more complete query would add `&& span.trustabl.tool.side_effect != "none"`
+  more complete query would add `&& span.trustabl.tool.side_effect != "pure"`
   to the span filter. Left out to stay consistent with the memo's sketch;
   flagged so it isn't mistaken for a deliberate omission.
 - **`when.window: last_5_tool_calls_in_run`** is a call-count window

@@ -104,7 +104,7 @@
       "gridPos": { "h": 4, "w": 24, "x": 0, "y": 10 },
       "options": {
         "mode": "markdown",
-        "content": "**trustabl.tool_loop** fires when `count_same(trustabl.tool.input_fp) >= 3` within the last 5 `execute_tool` calls in a run, where `trustabl.tool.side_effect != none`.\n\nThe automated alert rule is defined in `alert-rule.yaml` (same directory). When provisioned via Grafana's alerting provisioning, it fires automatically — no manual counting needed. Alert state changes appear as annotations on the table above (red markers on the time axis).\n\nThe demo trace (`local_agent_ollama_demo.py`) issues the same query (and thus the same `input_fp`) at steps 1, 3, and 4 — three occurrences — which is exactly the threshold. Severity: **high** per `rules/tool_loop.yaml`."
+        "content": "**trustabl.tool_loop** fires when `count_same(trustabl.tool.input_fp) >= 3` within the last 5 `execute_tool` calls in a run, where `trustabl.tool.side_effect != pure`.\n\nThe automated alert rule is defined in `alert-rule.yaml` (same directory). When provisioned via Grafana's alerting provisioning, it fires automatically — no manual counting needed. Alert state changes appear as annotations on the table above (red markers on the time axis).\n\nThe demo trace (`local_agent_ollama_demo.py`) issues the same query (and thus the same `input_fp`) at steps 1, 3, and 4 — three occurrences — which is exactly the threshold. Severity: **high** per `rules/tool_loop.yaml`."
       }
     }
   ]
