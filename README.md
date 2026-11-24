@@ -46,12 +46,17 @@ data so any observability backend can evaluate it against live agent trace data.
   - [`translations/langsmith/`](translations/langsmith/) — a saved-filter
     query. **Most speculative of the seven** — LangSmith's filter grammar
     cannot fully express the sliding-window condition in one filter.
-  - [`translations/openlit/`](translations/openlit/) — a ClickHouse SQL
-    detection query against OpenLIT's `otel_traces` table. Uses an exact
-    call-count window via `row_number()` — closer to the rule's intent than
-    the time-window approximation in the Grafana/Datadog packs.
-- [`scripts/`](scripts/) — `create-datadog-monitor.py`: translates any rule
-  YAML into a Datadog composite monitor via the Monitors API.
+  - [`translations/openlit/`](translations/openlit/) — ClickHouse SQL
+    detection queries against OpenLIT's `otel_traces` table, for `tool_loop`,
+    `retry_storm`, `false_idempotent`, `policy_absent`, `handoff_unbound`,
+    `instrumentation_degraded`, `dspm_unbound` and `policy_drift`.
+    `tool_loop` uses an exact call-count window via `row_number()` — closer to
+    the rule's intent than the time-window approximation in the Grafana/Datadog
+    packs.
+- [`scripts/`](scripts/) — `create-datadog-monitor.py` posts the `tool_loop` monitor JSON
+  ([`translations/datadog/monitor.json`](translations/datadog/monitor.json)) to the Datadog
+  Monitors API; it does not read rule YAML and handles no other rule.
+  `check-otel-names.py` checks every `trustabl.*` name against the labels spec.
 
 ## v0.1 rules
 
@@ -76,9 +81,44 @@ following the shape defined in [`rule-ir-schema.yaml`](rule-ir-schema.yaml):
 `constraint_hit` is shadow-only: constraint fires are expected behavior, not a
 defect — the rule surfaces them for trend analysis without paging anyone.
 
-The Grafana translation in [`translations/grafana/`](translations/grafana/) is
-fully worked for `tool_loop`. The other eleven rules follow the same mapping;
-translating them is the next translation-pack slice.
+The Grafana, Datadog, Langfuse, Dunetrace, Phoenix and LangSmith packs translate
+`tool_loop` only. The Grafana mapping table describes `tool_loop`; the other rules do not
+follow it. The OpenLIT pack covers eight rules (see above), each with its own reading
+documented in its SQL header.
+
+## Names
+
+Attribute and event names follow the labels spec (`spec/keys.json` in
+`agent-reliability-otel-labels`); `scripts/check-otel-names.py` enforces it. Contract identity
+is `trustabl.contract_id` and `trustabl.contract_hash`: the spec reserves both as **resource**
+attributes that the deployment sets through `OTEL_RESOURCE_ATTRIBUTES`; the SDK does not write
+them. `trustabl.contract.version` and the `trustabl.constraint.*` names are not in the spec and
+are allowlisted in `scripts/otel-names-allowlist.txt` until the tech leads decide them. Event
+conditions (`absent_binding_type`, `absent_event`, `value_drift` per key) are defined in
+`rule-ir-schema.yaml`.
+
+## Rule status
+
+"Works" means the data the rule reads is written by the labels SDK and the names match the
+spec. Checked by reading the SDK; OpenLIT queries were run on synthetic spans only.
+
+| Rule | Status | OpenLIT query |
+|------|--------|---------------|
+| `tool_loop` | works | yes |
+| `retry_storm` | works | yes |
+| `false_idempotent` | works | yes |
+| `policy_absent` | works | yes |
+| `handoff_unbound` | works | yes |
+| `instrumentation_degraded` | works | yes |
+| `dspm_unbound` | works | yes |
+| `policy_drift` | works | yes |
+| `contract_drift` | needs deployment to set the resource attributes | no |
+| `irreversible_unguarded` | needs constraint data (policy emitter); fires wrongly if enabled now | no |
+| `constraint_hit` | needs constraint data (policy emitter) | no |
+| `denied_then_answered` | needs constraint data (policy emitter) | no |
+
+What each rule catches and whether it works today:
+[`docs/rule-business-value.md`](docs/rule-business-value.md).
 
 ## Status
 

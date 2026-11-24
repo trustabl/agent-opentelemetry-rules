@@ -17,10 +17,20 @@ fix_class: policy.require_bundle
 
 when:
   span: invoke_agent
+  # No data_security binding event that is marked required. The SDK writes
+  # `required` on every binding ("this agent class must carry this rail", python/
+  # .../authority.py), so a data_security binding with required=false does not
+  # satisfy the rule. See absent_event in ../rule-ir-schema.yaml.
   condition:
-    absent_binding_type: [data_security]
+    absent_event:
+      name: trustabl.policy.binding
+      where:
+        trustabl.policy.binding.type: data_security
+        trustabl.policy.binding.required: true
 
 evidence:
+  - trustabl.policy.binding.type
+  - trustabl.policy.binding.required
   - trustabl.run_id
   - gen_ai.agent.name
   - trustabl.exit_reason

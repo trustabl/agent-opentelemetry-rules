@@ -1,7 +1,32 @@
-# `trustabl.tool_loop` → OpenLIT / ClickHouse
+# Trustabl rules → OpenLIT / ClickHouse
 
-A detection query for the `tool_loop` rule ([`../../rules/tool_loop.yaml`](../../rules/tool_loop.yaml))
-targeting OpenLIT's ClickHouse backend. OpenLIT stores OTel span data via the
+Detection queries for eight of the twelve rules, one SQL file each:
+
+| Rule | Query |
+|---|---|
+| `tool_loop` | [`query.sql`](query.sql) |
+| `retry_storm` | [`query-retry_storm.sql`](query-retry_storm.sql) |
+| `false_idempotent` | [`query-false_idempotent.sql`](query-false_idempotent.sql) |
+| `policy_absent` | [`query-policy_absent.sql`](query-policy_absent.sql) |
+| `handoff_unbound` | [`query-handoff_unbound.sql`](query-handoff_unbound.sql) |
+| `instrumentation_degraded` | [`query-instrumentation_degraded.sql`](query-instrumentation_degraded.sql) |
+| `dspm_unbound` | [`query-dspm_unbound.sql`](query-dspm_unbound.sql) |
+| `policy_drift` | [`query-policy_drift.sql`](query-policy_drift.sql) |
+
+No query yet: `contract_drift`, `irreversible_unguarded`, `constraint_hit`,
+`denied_then_answered`. They read contract or constraint data the labels SDK does not write
+(see [`../../docs/rule-business-value.md`](../../docs/rule-business-value.md)).
+
+The rest of this page describes the `tool_loop` query
+([`../../rules/tool_loop.yaml`](../../rules/tool_loop.yaml)) and its mapping table. That table
+is specific to `tool_loop`: the other seven queries have different shapes (event reads, a
+group by binding id, a per-run distinct count) and each documents its own reading of the rule
+in its SQL header. Table layout is taken from OpenLIT's
+`assets/clickhouse-init.sh` at commit `463a1c1b3cd72a94fab4155efe0f28d90d87fe95`. Span events
+(the `trustabl.policy.binding` events that `policy_absent`, `handoff_unbound`, `dspm_unbound` and `policy_drift` read) are
+stored as the parallel arrays `Events.Name` / `Events.Attributes`.
+
+The queries target OpenLIT's ClickHouse backend. OpenLIT stores OTel span data via the
 standard [OpenTelemetry ClickHouse Exporter](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/clickhouseexporter),
 so the translation is a SQL query against `otel.otel_traces`.
 
@@ -61,8 +86,30 @@ through the alert builder. The options:
 
 ## Status
 
-Hand-authored, not generated. Verified SQL syntax; not run against a live
-OpenLIT instance. Confidence is **medium**: the ClickHouse OTel schema is
-standardized and the query is straightforward SQL — higher confidence than
-the Phoenix or LangSmith packs, lower than Grafana/Datadog because we haven't
-confirmed against a real OpenLIT deployment.
+Hand-authored, not generated. All five queries were run against a ClickHouse engine (chdb
+4.5.1, embedded, not Docker: the Docker daemon was not running) using OpenLIT's exact
+`otel_traces` DDL and synthetic spans, one fire case and one silent case per rule; each fired
+only on its fire case. Not run against a live OpenLIT deployment or a real SDK trace.
+
+`policy_absent` reads `absent_binding_type: [sandbox, content_safety]` as "neither type is
+present" (see the SQL header). It therefore also fires on a handoff span that has only, say, a
+`custom` binding. The queries accept span names `execute_tool` / `execute_tool <tool>` and
+`invoke_agent` / `invoke_agent <agent>`, or `gen_ai.operation.name` set to the same.
+
+## Event conditions and names
+
+- The binding conditions (`absent_binding_type`, `absent_event`, and `value_drift` with `event`
+  and `per`) are defined in [`../../rule-ir-schema.yaml`](../../rule-ir-schema.yaml). Event
+  booleans arrive as the strings `'true'` / `'false'`.
+- `policy_drift` groups by `TraceId`, not `trustabl.run_id`: the SDK writes the run id only on
+  the root span (`Run.mark_start`), so child `invoke_agent` spans have no run id to join on.
+- Contract identity is `trustabl.contract_id` and `trustabl.contract_hash`, which the labels
+  spec reserves as **resource** attributes set by the deployment. If a rule for them gets a
+  query, read `ResourceAttributes[...]`, not `SpanAttributes`.
+
+## Testing
+
+All eight queries were run in chdb (embedded ClickHouse) against OpenLIT's `otel_traces`
+definition, with synthetic spans: one case that must fire and one that must stay silent per
+rule. `policy_drift` also has a run with two different bindings that must stay silent. Not run
+against a live OpenLIT.

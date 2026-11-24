@@ -54,13 +54,19 @@ payload_layer_2_process_and_authority:
     agents (memo §11).
   default: always_present_on_hardened_agents
   attributes:
+    # Where the labels SDK writes these two (python/.../spans.py, run.py):
+    #   mark_tool_span:      `if step_index is not None: span.set_attribute(keys.STEP_INDEX, step_index)`
+    #                        `if run_id is not None: span.set_attribute(keys.RUN_ID, run_id)`
+    #   mark_retrieval_span: the same two guarded writes
+    #   Run.mark_start:      "Stamp the run identity on the root span."
+    # step_index is never written on invoke_agent spans.
     - name: trustabl.step_index
-      on_span: all run steps
+      on_span: tool spans (execute_tool) and retrieval spans, only when the caller passes it
       type: integer
       purpose: Order survives OTLP batch splits.
 
     - name: trustabl.run_id
-      on_span: root
+      on_span: root span (Run.mark_start); also tool and retrieval spans when the caller passes it
       type: string
       purpose: One user task.
 
@@ -91,26 +97,33 @@ payload_layer_2_process_and_authority:
       type: integer
       purpose: Retry count.
 
-    # The contract.* and constraint.* attributes below are NOT emitted by the
-    # labels SDK and are not defined in its spec/keys.json (which reserves
-    # trustabl.contract_id and trustabl.contract_hash as resource attributes,
-    # and trustabl.constraint.id). Names are pending a decision by the tech
-    # leads; scripts/otel-names-allowlist.txt records each one.
-    - name: trustabl.contract.id
-      on_span: invoke_agent, sandbox root
+    # RESOURCE attributes, not span attributes. The labels spec reserves them
+    # and says the deployment produces them (spec/keys.json not_emitted_here):
+    #   "trustabl.contract_id": "deployment, via OTEL_RESOURCE_ATTRIBUTES"
+    #   "trustabl.contract_hash": "deployment, via OTEL_RESOURCE_ATTRIBUTES"
+    # They are read from the resource (OpenLIT: ResourceAttributes), never from
+    # span attributes. The SDK does not emit them.
+    - name: trustabl.contract_id
+      on_resource: true
       type: string
       purpose: Name of the IR that generated the bound policy artifacts (example -- trustabl.runtime.v1).
 
+    - name: trustabl.contract_hash
+      on_resource: true
+      type: string (sha256 hex)
+      purpose: Hash of the bytes of the IR document that generated these policies.
+
+    # Not in the labels spec and not read by any rule; allowlisted in
+    # scripts/otel-names-allowlist.txt pending a tech-lead decision.
     - name: trustabl.contract.version
       on_span: invoke_agent, sandbox root
       type: string
       purpose: Semver or git sha of the contract pack.
 
-    - name: trustabl.contract.sha256
-      on_span: invoke_agent, sandbox root
-      type: string (sha256 hex)
-      purpose: Hash of the bytes of the IR document that generated these policies.
-
+    # The constraint.* attributes below are NOT emitted by the labels SDK and
+    # are not defined in its spec/keys.json (which reserves trustabl.constraint.id
+    # only). Names are pending a decision by the tech leads; the allowlist
+    # records each one.
     - name: trustabl.constraint.kind
       on_span: when a compiled limit applies
       type: enum
