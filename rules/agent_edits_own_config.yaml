@@ -1,0 +1,37 @@
+# trustabl.agent_edits_own_config
+#
+# One of Trustabl's P1 runtime rules, SHADOW: nothing emits the data yet.
+# DATA, not code. Shape in ../rule-ir-schema.yaml.
+#
+# Source (idea only): TraceSig CC-PRIV-001 (github.com/howardhsieh/tracesig, Apache-2.0): an agent
+# editing its own configuration or instructions.
+#
+# Needs, none emitted yet:
+#   trustabl.tool.target_class  enum, on execute_tool. Emitted by the labels
+#       SDK: what class of resource a write touched. The value this rule keys on
+#       is agent_config (the agent's own settings, hooks, permissions or policy
+#       files). Class only, never the path.
+# Uses existing labels: trustabl.tool.side_effect, trustabl.run_id.
+
+id: trustabl.agent_edits_own_config
+title: Agent wrote to its own configuration or permissions
+severity: critical
+fix_class: policy.protect_agent_config
+
+when:
+  span: execute_tool
+  condition:
+    all:
+      - field: trustabl.tool.side_effect
+        in: [write, irreversible]
+      - field: trustabl.tool.target_class
+        eq: agent_config
+
+evidence:
+  - gen_ai.tool.name
+  - trustabl.tool.target_class
+  - trustabl.tool.side_effect
+  - trustabl.run_id
+  - trustabl.step_index
+
+shadow: true

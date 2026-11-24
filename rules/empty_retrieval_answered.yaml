@@ -1,0 +1,39 @@
+# trustabl.empty_retrieval_answered
+#
+# One of Trustabl's P1 runtime rules. This file is DATA, not code: it is
+# never loaded, parsed, or evaluated by the `trustabl` binary. See
+# ../rule-ir-schema.yaml for the shape.
+#
+# Source (idea only, no code or rule text copied): Dunetrace RAG_EMPTY_RETRIEVAL (github.com/dunetrace/dunetrace, Apache-2.0):
+# retrieval returned nothing, yet the agent answered anyway.
+#
+# Needs: trustabl.retrieval.result_count (retrieval span, new label),
+# trustabl.run_id on the retrieval span, trustabl.exit_reason. Fires when the
+# run's last retrieval returned zero results and the run still ended with a
+# final answer. A later retrieval with results clears it.
+
+id: trustabl.empty_retrieval_answered
+title: Final answer given after a retrieval that returned no results
+severity: high
+fix_class: agent.require_grounding
+
+when:
+  span: invoke_agent
+  window: same_run_id
+  condition:
+    sequence:
+      - span: retrieval
+        field: trustabl.retrieval.result_count
+        eq: 0
+      - span: invoke_agent
+        field: trustabl.exit_reason
+        eq: final_answer
+        no_intervening_retrieval_with: {field: trustabl.retrieval.result_count, gt: 0}
+
+evidence:
+  - trustabl.retrieval.result_count
+  - trustabl.exit_reason
+  - trustabl.run_id
+  - trustabl.step_index
+
+shadow: false

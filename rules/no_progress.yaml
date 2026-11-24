@@ -1,0 +1,37 @@
+# trustabl.no_progress
+#
+# One of Trustabl's P1 runtime rules. This file is DATA, not code: it is
+# never loaded, parsed, or evaluated by the `trustabl` binary. See
+# ../rule-ir-schema.yaml for the shape.
+#
+# Source (idea only, no code or rule text copied): MAST FM-1.3 "Step repetition" (arXiv 2503.13657 v3) and AgentDiff
+# (github.com/kerrshift/agentdiff, MIT): repeated or redundant steps that do not
+# move the task forward.
+#
+# Needs: trustabl.progress_marker (tool span, new label), trustabl.step_index,
+# trustabl.run_id. The marker is a fingerprint of the task state after a step.
+# Three consecutive tool steps with the same marker means the agent is acting
+# without changing anything. Different from trustabl.tool_loop, which needs
+# identical ARGUMENTS: here the arguments may differ but the state does not.
+
+id: trustabl.no_progress
+title: Consecutive tool steps left the task state unchanged
+severity: high
+fix_class: agent.cap_steps
+
+when:
+  span: execute_tool
+  window: last_3_tool_calls_in_run
+  condition:
+    count_same: trustabl.progress_marker
+    gte: 3
+    consecutive: true
+
+evidence:
+  - gen_ai.tool.name
+  - trustabl.progress_marker
+  - trustabl.tool.input_fp
+  - trustabl.step_index
+  - trustabl.run_id
+
+shadow: false

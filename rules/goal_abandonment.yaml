@@ -1,0 +1,38 @@
+# trustabl.goal_abandonment
+#
+# One of Trustabl's P1 runtime rules. DATA, not code. Shape in
+# ../rule-ir-schema.yaml.
+#
+# Source (idea only, no code or rule text copied): Dunetrace GOAL_ABANDONMENT
+# (github.com/dunetrace/dunetrace, Apache-2.0, docs/detectors.md): tool use
+# stops, then the agent keeps making model calls with no clean exit.
+#
+# Needs: trustabl.exit_reason on the root span, plus standard gen_ai spans. The
+# run is the trace; chat spans carry no trustabl label. Fires when, after the
+# run's last execute_tool span, there are 4 or more chat spans and the run did
+# not end with exit_reason=final_answer (ended max_steps, error, policy_stop,
+# or never recorded one).
+
+id: trustabl.goal_abandonment
+title: Tool use stopped, then the agent kept calling the model without finishing
+severity: medium
+fix_class: agent.cap_steps
+
+when:
+  span: invoke_agent
+  window: same_run_id
+  condition:
+    all:
+      # GAP: "chat spans after the last execute_tool span" is an ordering
+      # count across span kinds; the IR has no such form, so it is named here.
+      - chat_spans_after_last_tool:
+          gte: 4
+      - field: trustabl.exit_reason
+        not_eq: final_answer
+
+evidence:
+  - trustabl.exit_reason
+  - trustabl.run_id
+  - gen_ai.agent.name
+
+shadow: false

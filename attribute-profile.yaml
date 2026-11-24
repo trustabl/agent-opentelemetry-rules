@@ -91,6 +91,26 @@ payload_layer_2_process_and_authority:
       type: integer
       purpose: Retry count.
 
+    - name: trustabl.expected_tools
+      on_span: root (invoke_agent)
+      type: string array
+      purpose: >
+        Tool names the run was expected to use. Names only. Omitted when no
+        expectation was declared. Used by premature_termination and
+        tool_avoidance. Stored by OpenLIT's ClickHouse exporter as a JSON string.
+
+    - name: trustabl.retrieval.result_count
+      on_span: retrieval (gen_ai.operation.name = retrieval)
+      type: integer (>= 0)
+      purpose: Results the retrieval returned. Zero is written. Used by empty_retrieval_answered.
+
+    - name: trustabl.progress_marker
+      on_span: execute_tool
+      type: string (16-hex-char fixed-length hash)
+      purpose: >
+        Fingerprint of the task state after the step. The same value on
+        consecutive steps means no progress. Used by no_progress.
+
     # The contract.* and constraint.* attributes below are NOT emitted by the
     # labels SDK and are not defined in its spec/keys.json (which reserves
     # trustabl.contract_id and trustabl.contract_hash as resource attributes,
@@ -215,6 +235,19 @@ payload_layer_2_process_and_authority:
             §5.2.1). source=external marks a binding not generated from
             the named contract (hand-written ACS, vendor default) — never
             claim it came from an IR it didn't (memo §5.2.2).
+
+# ============================================================
+# Proposed, NOT emitted yet (used by shadow rules only)
+# ============================================================
+# These names are not in the labels spec (spec/keys.json) and are listed in
+# scripts/otel-names-allowlist.txt. Nothing produces them today.
+proposed_not_emitted:
+  - name: trustabl.tool.destination_grounded   # boolean, execute_tool, labels SDK. ungrounded_destination
+  - name: trustabl.tool.data_class             # enum (pii, phi_hipaa, pci, secrets, customer_confidential), execute_tool, labels SDK. sensitive_read_external_send
+  - name: trustabl.tool.egress                 # enum (internal, external), execute_tool, labels SDK. sensitive_read_external_send, denied_then_allowed_sink
+  - name: trustabl.tool.output_trust           # enum (trusted, untrusted), execute_tool, labels SDK. untrusted_input_privileged_call
+  - name: trustabl.tool.target_class           # enum (agent_config, ...), execute_tool, labels SDK. agent_edits_own_config
+  - name: trustabl.agent.granted_tools_count   # integer, invoke_agent, policy emitter. delegation_trust_escalation
 
 payload_layer_3_content:
   description: >

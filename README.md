@@ -23,11 +23,12 @@ data so any observability backend can evaluate it against live agent trace data.
 - [`attribute-profile.yaml`](attribute-profile.yaml) — the v0.1 `trustabl.*`
   span attribute and event reference.
 - [`rule-ir-schema.yaml`](rule-ir-schema.yaml) — the rule YAML shape reference.
-- [`rules/`](rules/) — all twelve v0.1 rules, each as a YAML file:
+- [`rules/`](rules/) — twenty-four rules, each as a YAML file: the twelve v0.1 rules:
   `tool_loop`, `retry_storm`, `policy_absent`, `policy_drift`,
   `contract_drift`, `irreversible_unguarded`, `constraint_hit` (shadow),
   `false_idempotent`, `handoff_unbound`, `instrumentation_degraded`,
-  plus two from the DSPM addendum: `dspm_unbound`, `denied_then_answered`.
+  plus two from the DSPM addendum: `dspm_unbound`, `denied_then_answered`;
+  and twelve P1 rules (five active, seven shadow), listed in the P1 table below.
 - [`translations/`](translations/) — worked translations of the rules into
   vendor-native formats. Confidence varies by backend — see each subdirectory's
   own README for specifics:
@@ -46,16 +47,17 @@ data so any observability backend can evaluate it against live agent trace data.
   - [`translations/langsmith/`](translations/langsmith/) — a saved-filter
     query. **Most speculative of the seven** — LangSmith's filter grammar
     cannot fully express the sliding-window condition in one filter.
-  - [`translations/openlit/`](translations/openlit/) — a ClickHouse SQL
-    detection query against OpenLIT's `otel_traces` table. Uses an exact
-    call-count window via `row_number()` — closer to the rule's intent than
-    the time-window approximation in the Grafana/Datadog packs.
+  - [`translations/openlit/`](translations/openlit/) — ClickHouse SQL
+    detection queries against OpenLIT's `otel_traces` table: `tool_loop` plus
+    the five active P1 rules. `tool_loop` uses an exact call-count window via
+    `row_number()` — closer to the rule's intent than the time-window
+    approximation in the Grafana/Datadog packs.
 - [`scripts/`](scripts/) — `create-datadog-monitor.py`: translates any rule
   YAML into a Datadog composite monitor via the Monitors API.
 
 ## v0.1 rules
 
-All twelve rules are authored as YAML files in [`rules/`](rules/), each
+The first twelve rules are authored as YAML files in [`rules/`](rules/), each
 following the shape defined in [`rule-ir-schema.yaml`](rule-ir-schema.yaml):
 
 | Rule | Severity | Fix class | Shadow |
@@ -79,6 +81,32 @@ defect — the rule surfaces them for trend analysis without paging anyone.
 The Grafana translation in [`translations/grafana/`](translations/grafana/) is
 fully worked for `tool_loop`. The other eleven rules follow the same mapping;
 translating them is the next translation-pack slice.
+
+## P1 rules
+
+Twelve more rules, from the OpenLIT integration plan. The five active ones use
+only names the labels spec defines (three were added to it: `trustabl.expected_tools`,
+`trustabl.retrieval.result_count`, `trustabl.progress_marker`) and have an
+[OpenLIT query](translations/openlit/). The seven **shadow** rules need labels or
+policy data that nothing emits yet; their names are proposed, not defined, and
+are listed in [`scripts/otel-names-allowlist.txt`](scripts/otel-names-allowlist.txt).
+
+| Rule | Severity | Fix class | Shadow |
+|------|----------|-----------|--------|
+| [`goal_abandonment`](rules/goal_abandonment.yaml) | medium | `agent.cap_steps` | no |
+| [`premature_termination`](rules/premature_termination.yaml) | medium | `agent.complete_expected_steps` | no |
+| [`no_progress`](rules/no_progress.yaml) | high | `agent.cap_steps` | no |
+| [`empty_retrieval_answered`](rules/empty_retrieval_answered.yaml) | high | `agent.require_grounding` | no |
+| [`tool_avoidance`](rules/tool_avoidance.yaml) | medium | `agent.require_tool_use` | no |
+| [`ungrounded_destination`](rules/ungrounded_destination.yaml) | high | `policy.require_grounded_destination` | **yes** |
+| [`sensitive_read_external_send`](rules/sensitive_read_external_send.yaml) | critical | `policy.restrict_egress` | **yes** |
+| [`untrusted_input_privileged_call`](rules/untrusted_input_privileged_call.yaml) | high | `policy.gate_privileged_call` | **yes** |
+| [`repeated_policy_denials`](rules/repeated_policy_denials.yaml) | high | `policy.stop_on_repeated_denial` | **yes** |
+| [`denied_then_allowed_sink`](rules/denied_then_allowed_sink.yaml) | critical | `policy.close_sink_bypass` | **yes** |
+| [`agent_edits_own_config`](rules/agent_edits_own_config.yaml) | critical | `policy.protect_agent_config` | **yes** |
+| [`delegation_trust_escalation`](rules/delegation_trust_escalation.yaml) | high | `policy.narrow_delegation` | **yes** |
+
+That makes 24 rules, 8 of them shadow (the 7 above and `constraint_hit`).
 
 ## Status
 

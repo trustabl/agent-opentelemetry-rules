@@ -1,0 +1,41 @@
+# trustabl.delegation_trust_escalation
+#
+# One of Trustabl's P1 runtime rules, SHADOW: nothing emits the data yet.
+# DATA, not code. Shape in ../rule-ir-schema.yaml.
+#
+# Source (idea only): UNRESOLVED. "Aegis" matched several unrelated projects and none was read
+# (candidate: github.com/Acacian/aegis, delegation chains with non-increasing
+# trust). The logic below stands on the labels alone: a delegated agent holding
+# more authority than its delegator.
+#
+# Needs, none emitted yet:
+#   trustabl.agent.granted_tools_count  integer, on invoke_agent. Emitted by the
+#       policy/constraint emitter (it knows the grants), or by the labels SDK if
+#       the caller passes the grant list. Count only, never the tool names.
+# Uses existing labels: trustabl.handoff_id (marks the child), trustabl.run_id.
+#
+# GAP: the IR cannot compare an attribute across a parent and child span. The
+# parent_span_compare form below is the closest existing shape; a translation
+# pack must join the child to its parent through the span parent id.
+
+id: trustabl.delegation_trust_escalation
+title: Delegated agent holds more tool grants than the agent that delegated to it
+severity: high
+fix_class: policy.narrow_delegation
+
+when:
+  span: invoke_agent
+  condition:
+    all:
+      - present: trustabl.handoff_id
+      - parent_span_compare:
+          field: trustabl.agent.granted_tools_count
+          child_gt_parent: true
+
+evidence:
+  - trustabl.handoff_id
+  - trustabl.agent.granted_tools_count
+  - gen_ai.agent.name
+  - trustabl.run_id
+
+shadow: true

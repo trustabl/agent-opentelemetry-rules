@@ -59,10 +59,40 @@ through the alert builder. The options:
   selected but not joined back to the original span rows — a real integration
   would enrich the output with the full span context before surfacing it.
 
+## P1 rule queries
+
+Five more queries, one per active P1 rule. There is none for the shadow rules,
+since no data exists for them yet. Each is a standalone file; run it like
+`query.sql`. A run is a trace (`TraceId`); the root `invoke_agent` span only
+exports when it ends, so a returned row means the run finished.
+
+| Query | Rule | Fires when |
+|---|---|---|
+| [`goal_abandonment.sql`](goal_abandonment.sql) | `goal_abandonment` | 4 or more `chat` spans after the last `execute_tool` and `exit_reason` is not `final_answer` |
+| [`premature_termination.sql`](premature_termination.sql) | `premature_termination` | `final_answer`, at least one but not all of `trustabl.expected_tools` called |
+| [`no_progress.sql`](no_progress.sql) | `no_progress` | 3 consecutive tool steps (by `step_index`) with the same `trustabl.progress_marker` |
+| [`empty_retrieval_answered.sql`](empty_retrieval_answered.sql) | `empty_retrieval_answered` | `final_answer` and the run's last retrieval has `trustabl.retrieval.result_count` = 0 |
+| [`tool_avoidance.sql`](tool_avoidance.sql) | `tool_avoidance` | `final_answer`, expected tools declared, none called |
+
+Notes:
+
+- `trustabl.expected_tools` is an array attribute; the ClickHouse exporter
+  stores it as a JSON string in the `SpanAttributes` map, so the queries use
+  `JSONExtract(..., 'Array(String)')`. Confirm that on your deployment.
+- Spans are matched by `SpanName` or `gen_ai.operation.name`.
+- `goal_abandonment` and the chat count assume chat spans share the run's trace.
+  Parent-child comparison, set difference and cross-span ordering are not in
+  the rule IR, so the rule files name them as gaps and the SQL implements them.
+- Tests: `tests/run_queries.py` loads synthetic spans (a fire and a silent case
+  per rule, plus edge cases) into an embedded ClickHouse ([chdb](https://pypi.org/project/chdb/))
+  using the exporter's table layout, and checks which runs each query returns.
+  This is not OpenLIT's own deployment or a Docker ClickHouse server.
+
 ## Status
 
-Hand-authored, not generated. Verified SQL syntax; not run against a live
-OpenLIT instance. Confidence is **medium**: the ClickHouse OTel schema is
+Hand-authored, not generated. The five P1 queries ran against synthetic
+spans in chdb 4.5.1 (ClickHouse 26.11); `tool_loop` has verified SQL syntax only. Nothing
+was run against a live OpenLIT instance. Confidence is **medium**: the ClickHouse OTel schema is
 standardized and the query is straightforward SQL — higher confidence than
 the Phoenix or LangSmith packs, lower than Grafana/Datadog because we haven't
 confirmed against a real OpenLIT deployment.

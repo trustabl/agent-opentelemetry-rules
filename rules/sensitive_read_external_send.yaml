@@ -1,0 +1,45 @@
+# trustabl.sensitive_read_external_send
+#
+# One of Trustabl's P1 runtime rules, SHADOW: nothing emits the data yet.
+# DATA, not code. Shape in ../rule-ir-schema.yaml.
+#
+# Source (idea only): TraceSig CC-EXF-001 (github.com/howardhsieh/tracesig, Apache-2.0): a
+# secret is read, then an outbound call is made in the same session. Invariant
+# Labs' guardrails (Apache-2.0) express similar flows; no rule text was copied.
+#
+# Needs, none emitted yet:
+#   trustabl.tool.data_class  enum, on execute_tool. Emitted by the labels SDK:
+#       the class of data the tool returned (pii, phi_hipaa, pci, secrets,
+#       customer_confidential, the same taxonomy as trustabl.constraint.data_class).
+#       Taxonomy label only, never the data.
+#   trustabl.tool.egress      enum [internal, external], on execute_tool.
+#       Emitted by the labels SDK: whether the call sends data out of the
+#       trust boundary.
+# Uses existing labels: trustabl.step_index, trustabl.run_id.
+
+id: trustabl.sensitive_read_external_send
+title: External send after a sensitive-data read in the same run
+severity: critical
+fix_class: policy.restrict_egress
+
+when:
+  span: execute_tool
+  window: same_run_id
+  condition:
+    sequence:
+      - span: execute_tool
+        field: trustabl.tool.data_class
+        in: [pii, phi_hipaa, pci, secrets, customer_confidential]
+      - span: execute_tool
+        field: trustabl.tool.egress
+        eq: external
+        later_step_index_than_first: true
+
+evidence:
+  - gen_ai.tool.name
+  - trustabl.tool.data_class
+  - trustabl.tool.egress
+  - trustabl.run_id
+  - trustabl.step_index
+
+shadow: true

@@ -13,3 +13,9 @@ trustabl.constraint.sha256       # not in spec, no producer; pending tech leads
 trustabl.constraint.data_class   # not in spec, no producer (DSPM); pending tech leads
 trustabl.runtime.v1          # example contract id value in profile prose, not an attribute
 trustabl.tool.name           # negative example in profile prose, not an attribute
+trustabl.tool.destination_grounded   # proposed for ungrounded_destination, not emitted yet
+trustabl.tool.data_class             # proposed for sensitive_read_external_send, not emitted yet
+trustabl.tool.egress                 # proposed for sensitive_read_external_send and denied_then_allowed_sink, not emitted yet
+trustabl.tool.output_trust           # proposed for untrusted_input_privileged_call, not emitted yet
+trustabl.tool.target_class           # proposed for agent_edits_own_config, not emitted yet
+trustabl.agent.granted_tools_count   # proposed for delegation_trust_escalation, not emitted yet
