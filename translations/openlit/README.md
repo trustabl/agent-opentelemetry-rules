@@ -1,7 +1,23 @@
-# `trustabl.tool_loop` → OpenLIT / ClickHouse
+# Trustabl rules → OpenLIT / ClickHouse
 
-A detection query for the `tool_loop` rule ([`../../rules/tool_loop.yaml`](../../rules/tool_loop.yaml))
-targeting OpenLIT's ClickHouse backend. OpenLIT stores OTel span data via the
+Detection queries for five rules, one SQL file each:
+
+| Rule | Query |
+|---|---|
+| `tool_loop` | [`query.sql`](query.sql) |
+| `retry_storm` | [`query-retry_storm.sql`](query-retry_storm.sql) |
+| `false_idempotent` | [`query-false_idempotent.sql`](query-false_idempotent.sql) |
+| `policy_absent` | [`query-policy_absent.sql`](query-policy_absent.sql) |
+| `handoff_unbound` | [`query-handoff_unbound.sql`](query-handoff_unbound.sql) |
+
+The rest of this page describes the `tool_loop` query
+([`../../rules/tool_loop.yaml`](../../rules/tool_loop.yaml)); the others follow the same
+pattern and carry their own notes in the SQL header. Table layout is taken from OpenLIT's
+`assets/clickhouse-init.sh` at commit `463a1c1b3cd72a94fab4155efe0f28d90d87fe95`. Span events
+(the `trustabl.policy.binding` events that `policy_absent` and `handoff_unbound` read) are
+stored as the parallel arrays `Events.Name` / `Events.Attributes`.
+
+The queries target OpenLIT's ClickHouse backend. OpenLIT stores OTel span data via the
 standard [OpenTelemetry ClickHouse Exporter](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/clickhouseexporter),
 so the translation is a SQL query against `otel.otel_traces`.
 
@@ -61,8 +77,12 @@ through the alert builder. The options:
 
 ## Status
 
-Hand-authored, not generated. Verified SQL syntax; not run against a live
-OpenLIT instance. Confidence is **medium**: the ClickHouse OTel schema is
-standardized and the query is straightforward SQL — higher confidence than
-the Phoenix or LangSmith packs, lower than Grafana/Datadog because we haven't
-confirmed against a real OpenLIT deployment.
+Hand-authored, not generated. All five queries were run against a ClickHouse engine (chdb
+4.5.1, embedded, not Docker: the Docker daemon was not running) using OpenLIT's exact
+`otel_traces` DDL and synthetic spans, one fire case and one silent case per rule; each fired
+only on its fire case. Not run against a live OpenLIT deployment or a real SDK trace.
+
+`policy_absent` reads `absent_binding_type: [sandbox, content_safety]` as "neither type is
+present" (see the SQL header). It therefore also fires on a handoff span that has only, say, a
+`custom` binding. The queries accept span names `execute_tool` / `execute_tool <tool>` and
+`invoke_agent` / `invoke_agent <agent>`, or `gen_ai.operation.name` set to the same.

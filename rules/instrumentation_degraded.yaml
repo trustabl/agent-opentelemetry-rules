@@ -11,20 +11,29 @@
 # 2026), §5.5.
 
 id: trustabl.instrumentation_degraded
-title: execute_tool span missing required trustabl fingerprint attributes
+title: execute_tool span labelled by the SDK but missing trustabl.step_index
 severity: medium
 fix_class: instrumentation.add_emitter
 
+# The labels SDK writes trustabl.step_index only on tool spans and retrieval
+# spans, and only when the caller passes it (python/.../spans.py,
+# mark_tool_span: `if step_index is not None: span.set_attribute(keys.STEP_INDEX, step_index)`).
+# It never writes it on invoke_agent spans, so judging it there fired on every
+# versioned agent span. The rule now looks at execute_tool spans.
+# trustabl.tool.attempt is the one key mark_tool_span always writes
+# (`span.set_attribute(keys.TOOL_ATTEMPT, attempt)`), so "attempt present,
+# step_index absent" means the SDK decorated this span but the caller did not
+# supply step_index. A tool span the SDK never touched is not flagged.
 when:
-  span: invoke_agent
+  span: execute_tool
   condition:
     all:
-      - present: gen_ai.agent.version
+      - present: trustabl.tool.attempt
       - absent: trustabl.step_index
 
 evidence:
-  - gen_ai.agent.name
-  - gen_ai.agent.version
+  - gen_ai.tool.name
+  - trustabl.tool.attempt
   - trustabl.run_id
 
 shadow: false
