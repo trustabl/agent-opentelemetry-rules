@@ -1,0 +1,50 @@
+# trustabl.denied_then_allowed_sink
+#
+# One of Trustabl's P1 runtime rules, SHADOW: nothing emits the data yet.
+# DATA, not code. Shape in ../rule-ir-schema.yaml.
+#
+# Source (idea only): TraceSig APG-003 (github.com/howardhsieh/tracesig, Apache-2.0): a blocked
+# outbound call followed by an allowed one.
+#
+# Needs, none emitted yet:
+#   trustabl.constraint.decision  enum, on execute_tool. Emitted by the
+#       policy/constraint emitter (already allowlisted).
+#   trustabl.tool.egress          enum [internal, external], on execute_tool.
+#       Emitted by the labels SDK. Marks the call as a sink.
+# Uses existing labels: gen_ai.tool.name (standard), trustabl.tool.input_fp,
+# trustabl.run_id, trustabl.step_index.
+#
+# Differs from trustabl.denied_then_answered: that one needs a final answer; this
+# one needs a later ALLOWED call to the same kind of sink.
+
+id: trustabl.denied_then_allowed_sink
+title: External sink denied, then reached by a later allowed call in the same run
+severity: critical
+fix_class: policy.close_sink_bypass
+
+when:
+  span: execute_tool
+  window: same_run_id
+  condition:
+    sequence:
+      - span: execute_tool
+        field: trustabl.constraint.decision
+        eq: deny
+        and_field: trustabl.tool.egress
+        and_eq: external
+      - span: execute_tool
+        field: trustabl.constraint.decision
+        eq: allow
+        and_field: trustabl.tool.egress
+        and_eq: external
+        later_step_index_than_first: true
+
+evidence:
+  - gen_ai.tool.name
+  - trustabl.tool.input_fp
+  - trustabl.constraint.decision
+  - trustabl.tool.egress
+  - trustabl.run_id
+  - trustabl.step_index
+
+shadow: true

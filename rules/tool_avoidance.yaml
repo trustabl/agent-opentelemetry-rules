@@ -1,0 +1,38 @@
+# trustabl.tool_avoidance
+#
+# One of Trustabl's P1 runtime rules. This file is DATA, not code: it is
+# never loaded, parsed, or evaluated by the `trustabl` binary. See
+# ../rule-ir-schema.yaml for the shape.
+#
+# Source (idea only, no code or rule text copied): Dunetrace TOOL_AVOIDANCE (github.com/dunetrace/dunetrace, Apache-2.0,
+# docs/detectors.md): a final answer given without calling any available tool.
+#
+# Needs: trustabl.expected_tools (root span, new label), trustabl.exit_reason
+# and gen_ai.tool.name. Fires when the run declared expected tools, none of
+# them was called, and the run ended with a final answer.
+
+id: trustabl.tool_avoidance
+title: Run answered without calling any of its expected tools
+severity: medium
+fix_class: agent.require_tool_use
+
+when:
+  span: invoke_agent
+  window: same_run_id
+  condition:
+    all:
+      - field: trustabl.exit_reason
+        eq: final_answer
+      - present: trustabl.expected_tools
+      # GAP: set intersection between the root's expected_tools and the
+      # gen_ai.tool.name of the run's execute_tool spans; expressed as a count.
+      - expected_tools_used_count:
+          eq: 0
+
+evidence:
+  - trustabl.expected_tools
+  - trustabl.exit_reason
+  - trustabl.run_id
+  - gen_ai.agent.name
+
+shadow: false

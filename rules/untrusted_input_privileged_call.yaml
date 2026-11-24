@@ -1,0 +1,42 @@
+# trustabl.untrusted_input_privileged_call
+#
+# One of Trustabl's P1 runtime rules, SHADOW: nothing emits the data yet.
+# DATA, not code. Shape in ../rule-ir-schema.yaml.
+#
+# Source (idea only): TraceSig APG-002 (github.com/howardhsieh/tracesig, Apache-2.0):
+# untrusted content reaches a state-changing or outbound tool. Invariant Labs'
+# guardrails express similar flows.
+#
+# Needs, none emitted yet:
+#   trustabl.tool.output_trust  enum [trusted, untrusted], on execute_tool.
+#       Emitted by the labels SDK: whether the tool's result came from a source
+#       the deployment does not control (web page, inbound email, user upload).
+# Uses existing labels: trustabl.tool.side_effect, trustabl.step_index,
+# trustabl.run_id.
+
+id: trustabl.untrusted_input_privileged_call
+title: Privileged tool call after an untrusted tool result in the same run
+severity: high
+fix_class: policy.gate_privileged_call
+
+when:
+  span: execute_tool
+  window: same_run_id
+  condition:
+    sequence:
+      - span: execute_tool
+        field: trustabl.tool.output_trust
+        eq: untrusted
+      - span: execute_tool
+        field: trustabl.tool.side_effect
+        in: [write, irreversible]
+        later_step_index_than_first: true
+
+evidence:
+  - gen_ai.tool.name
+  - trustabl.tool.output_trust
+  - trustabl.tool.side_effect
+  - trustabl.run_id
+  - trustabl.step_index
+
+shadow: true

@@ -1,0 +1,35 @@
+# trustabl.repeated_policy_denials
+#
+# One of Trustabl's P1 runtime rules, SHADOW: nothing emits the data yet.
+# DATA, not code. Shape in ../rule-ir-schema.yaml.
+#
+# Source (idea only): TraceSig APG-001 (github.com/howardhsieh/tracesig, Apache-2.0) (an agent that keeps retrying after
+# policy denials).
+#
+# Needs, none emitted yet (already allowlisted, pending the tech leads):
+#   trustabl.constraint.decision  enum, on execute_tool. Emitted by the
+#       policy/constraint emitter, not the labels SDK.
+# Uses existing labels: trustabl.run_id, trustabl.step_index.
+
+id: trustabl.repeated_policy_denials
+title: Three or more policy denials in one run
+severity: high
+fix_class: policy.stop_on_repeated_denial
+
+when:
+  span: execute_tool
+  window: same_run_id
+  condition:
+    count_where:
+      field: trustabl.constraint.decision
+      eq: deny
+    gte: 3
+
+evidence:
+  - gen_ai.tool.name
+  - trustabl.constraint.decision
+  - trustabl.constraint.kind
+  - trustabl.run_id
+  - trustabl.step_index
+
+shadow: true

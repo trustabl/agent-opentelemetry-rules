@@ -1,0 +1,43 @@
+# trustabl.premature_termination
+#
+# One of Trustabl's P1 runtime rules. This file is DATA, not code: it is
+# never loaded, parsed, or evaluated by the `trustabl` binary. See
+# ../rule-ir-schema.yaml for the shape.
+#
+# Source (idea only, no text copied): MAST failure mode FM-3.1 "Premature termination"
+# (Cemri et al., arXiv 2503.13657 v3): ending a task before its objectives are met.
+#
+# Needs: trustabl.expected_tools (root span, new label), trustabl.exit_reason
+# and gen_ai.tool.name. Fires only when the run declared expected tools, used
+# at least one of them, and still ended with a final answer while another was
+# never called. The zero-used case belongs to trustabl.tool_avoidance.
+
+id: trustabl.premature_termination
+title: Run gave a final answer before using all of its expected tools
+severity: medium
+fix_class: agent.complete_expected_steps
+
+when:
+  span: invoke_agent
+  window: same_run_id
+  condition:
+    all:
+      - field: trustabl.exit_reason
+        eq: final_answer
+      - present: trustabl.expected_tools
+      # Set difference over the run's execute_tool spans. The IR has no set
+      # operators, so these two keys are the closest existing form. GAP: a
+      # translation pack must implement the "used" set itself.
+      - expected_tools_used_count:
+          gte: 1
+      - expected_tools_unused_count:
+          gte: 1
+
+evidence:
+  - trustabl.expected_tools
+  - gen_ai.tool.name
+  - trustabl.exit_reason
+  - trustabl.run_id
+  - trustabl.step_index
+
+shadow: false

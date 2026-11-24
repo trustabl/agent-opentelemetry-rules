@@ -150,3 +150,17 @@ authored:
   # DSPM addendum (memo DSPM §5)
   - trustabl.dspm_unbound           # rules/dspm_unbound.yaml
   - trustabl.denied_then_answered   # rules/denied_then_answered.yaml
+  # P1 rules (OpenLIT integration plan)
+  - trustabl.goal_abandonment            # rules/goal_abandonment.yaml
+  - trustabl.premature_termination       # rules/premature_termination.yaml
+  - trustabl.no_progress                 # rules/no_progress.yaml
+  - trustabl.empty_retrieval_answered    # rules/empty_retrieval_answered.yaml
+  - trustabl.tool_avoidance              # rules/tool_avoidance.yaml
+  # P1 shadow rules (need data nothing emits yet)
+  - trustabl.ungrounded_destination         # rules/ungrounded_destination.yaml
+  - trustabl.sensitive_read_external_send   # rules/sensitive_read_external_send.yaml
+  - trustabl.untrusted_input_privileged_call # rules/untrusted_input_privileged_call.yaml
+  - trustabl.repeated_policy_denials        # rules/repeated_policy_denials.yaml
+  - trustabl.denied_then_allowed_sink       # rules/denied_then_allowed_sink.yaml
+  - trustabl.agent_edits_own_config         # rules/agent_edits_own_config.yaml
+  - trustabl.delegation_trust_escalation    # rules/delegation_trust_escalation.yaml

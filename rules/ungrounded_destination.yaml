@@ -1,0 +1,39 @@
+# trustabl.ungrounded_destination
+#
+# One of Trustabl's P1 runtime rules, SHADOW: nothing emits the data yet.
+# DATA, not code. Shape in ../rule-ir-schema.yaml.
+#
+# Source (idea only): Dunetrace UNGROUNDED_DESTINATION (github.com/dunetrace/dunetrace,
+# Apache-2.0): a tool call sends data to an email, URL or domain that appears
+# nowhere in the run's trusted inputs.
+#
+# Needs, none emitted yet:
+#   trustabl.tool.destination_grounded  boolean, on execute_tool. Emitted by the
+#       labels SDK: the caller says whether the destination argument (address,
+#       URL, recipient) was found in the task input or earlier results. Only the
+#       boolean is written, never the destination.
+# Uses existing labels: trustabl.tool.side_effect, trustabl.run_id.
+
+id: trustabl.ungrounded_destination
+title: Outbound tool call to a destination that was never grounded in the task
+severity: high
+fix_class: policy.require_grounded_destination
+
+when:
+  span: execute_tool
+  window: same_run_id
+  condition:
+    all:
+      - field: trustabl.tool.side_effect
+        in: [write, irreversible]
+      - field: trustabl.tool.destination_grounded
+        eq: false
+
+evidence:
+  - gen_ai.tool.name
+  - trustabl.tool.destination_grounded
+  - trustabl.tool.side_effect
+  - trustabl.run_id
+  - trustabl.step_index
+
+shadow: true
