@@ -29,7 +29,9 @@ WITH ranked AS (
     ) AS rn
   FROM otel.otel_traces
   WHERE
-    SpanName = 'execute_tool'
+    -- Instrumentors name the span either 'execute_tool' or 'execute_tool <tool>'.
+    (SpanAttributes['gen_ai.operation.name'] = 'execute_tool'
+      OR SpanName = 'execute_tool' OR startsWith(SpanName, 'execute_tool '))
     AND SpanAttributes['trustabl.tool.side_effect'] != 'pure'
     AND SpanAttributes['trustabl.tool.input_fp']    != ''
     AND Timestamp >= now() - INTERVAL 10 MINUTE

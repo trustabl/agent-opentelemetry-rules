@@ -46,10 +46,12 @@ data so any observability backend can evaluate it against live agent trace data.
   - [`translations/langsmith/`](translations/langsmith/) — a saved-filter
     query. **Most speculative of the seven** — LangSmith's filter grammar
     cannot fully express the sliding-window condition in one filter.
-  - [`translations/openlit/`](translations/openlit/) — a ClickHouse SQL
-    detection query against OpenLIT's `otel_traces` table. Uses an exact
-    call-count window via `row_number()` — closer to the rule's intent than
-    the time-window approximation in the Grafana/Datadog packs.
+  - [`translations/openlit/`](translations/openlit/) — ClickHouse SQL
+    detection queries against OpenLIT's `otel_traces` table, for `tool_loop`,
+    `retry_storm`, `false_idempotent`, `policy_absent` and `handoff_unbound`.
+    `tool_loop` uses an exact call-count window via `row_number()` — closer to
+    the rule's intent than the time-window approximation in the Grafana/Datadog
+    packs.
 - [`scripts/`](scripts/) — `create-datadog-monitor.py`: translates any rule
   YAML into a Datadog composite monitor via the Monitors API.
 
@@ -77,8 +79,12 @@ following the shape defined in [`rule-ir-schema.yaml`](rule-ir-schema.yaml):
 defect — the rule surfaces them for trend analysis without paging anyone.
 
 The Grafana translation in [`translations/grafana/`](translations/grafana/) is
-fully worked for `tool_loop`. The other eleven rules follow the same mapping;
-translating them is the next translation-pack slice.
+fully worked for `tool_loop`. The OpenLIT pack covers five rules (see above).
+Translating the remaining rules for the other backends is the next
+translation-pack slice.
+
+What each rule catches and whether it works today:
+[`docs/rule-business-value.md`](docs/rule-business-value.md).
 
 ## Status
 
