@@ -1,6 +1,6 @@
 # Trustabl rules → OpenLIT / ClickHouse
 
-Detection queries for five rules, one SQL file each:
+Detection queries for eight of the twelve rules, one SQL file each:
 
 | Rule | Query |
 |---|---|
@@ -9,12 +9,21 @@ Detection queries for five rules, one SQL file each:
 | `false_idempotent` | [`query-false_idempotent.sql`](query-false_idempotent.sql) |
 | `policy_absent` | [`query-policy_absent.sql`](query-policy_absent.sql) |
 | `handoff_unbound` | [`query-handoff_unbound.sql`](query-handoff_unbound.sql) |
+| `instrumentation_degraded` | [`query-instrumentation_degraded.sql`](query-instrumentation_degraded.sql) |
+| `dspm_unbound` | [`query-dspm_unbound.sql`](query-dspm_unbound.sql) |
+| `policy_drift` | [`query-policy_drift.sql`](query-policy_drift.sql) |
+
+No query yet: `contract_drift`, `irreversible_unguarded`, `constraint_hit`,
+`denied_then_answered`. They read contract or constraint data the labels SDK does not write
+(see [`../../docs/rule-business-value.md`](../../docs/rule-business-value.md)).
 
 The rest of this page describes the `tool_loop` query
-([`../../rules/tool_loop.yaml`](../../rules/tool_loop.yaml)); the others follow the same
-pattern and carry their own notes in the SQL header. Table layout is taken from OpenLIT's
+([`../../rules/tool_loop.yaml`](../../rules/tool_loop.yaml)) and its mapping table. That table
+is specific to `tool_loop`: the other seven queries have different shapes (event reads, a
+group by binding id, a per-run distinct count) and each documents its own reading of the rule
+in its SQL header. Table layout is taken from OpenLIT's
 `assets/clickhouse-init.sh` at commit `463a1c1b3cd72a94fab4155efe0f28d90d87fe95`. Span events
-(the `trustabl.policy.binding` events that `policy_absent` and `handoff_unbound` read) are
+(the `trustabl.policy.binding` events that `policy_absent`, `handoff_unbound`, `dspm_unbound` and `policy_drift` read) are
 stored as the parallel arrays `Events.Name` / `Events.Attributes`.
 
 The queries target OpenLIT's ClickHouse backend. OpenLIT stores OTel span data via the
@@ -86,3 +95,21 @@ only on its fire case. Not run against a live OpenLIT deployment or a real SDK t
 present" (see the SQL header). It therefore also fires on a handoff span that has only, say, a
 `custom` binding. The queries accept span names `execute_tool` / `execute_tool <tool>` and
 `invoke_agent` / `invoke_agent <agent>`, or `gen_ai.operation.name` set to the same.
+
+## Event conditions and names
+
+- The binding conditions (`absent_binding_type`, `absent_event`, and `value_drift` with `event`
+  and `per`) are defined in [`../../rule-ir-schema.yaml`](../../rule-ir-schema.yaml). Event
+  booleans arrive as the strings `'true'` / `'false'`.
+- `policy_drift` groups by `TraceId`, not `trustabl.run_id`: the SDK writes the run id only on
+  the root span (`Run.mark_start`), so child `invoke_agent` spans have no run id to join on.
+- Contract identity is `trustabl.contract_id` and `trustabl.contract_hash`, which the labels
+  spec reserves as **resource** attributes set by the deployment. If a rule for them gets a
+  query, read `ResourceAttributes[...]`, not `SpanAttributes`.
+
+## Testing
+
+All eight queries were run in chdb (embedded ClickHouse) against OpenLIT's `otel_traces`
+definition, with synthetic spans: one case that must fire and one that must stay silent per
+rule. `policy_drift` also has a run with two different bindings that must stay silent. Not run
+against a live OpenLIT.

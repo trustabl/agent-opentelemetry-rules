@@ -2,8 +2,6 @@
 # One per line: name  # reason (required). "prefix.*" covers a whole prefix.
 # An entry fails the check once keys.json defines the name, so stale entries get removed.
 
-trustabl.contract.id         # spec reserves trustabl.contract_id; name pending tech leads
-trustabl.contract.sha256     # spec reserves trustabl.contract_hash; name pending tech leads
 trustabl.contract.version    # not in spec, no producer decided; pending tech leads
 trustabl.constraint.kind     # not in spec, no producer (policy emitter); pending tech leads
 trustabl.constraint.decision # not in spec, no producer (policy emitter); pending tech leads

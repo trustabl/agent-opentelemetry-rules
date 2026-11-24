@@ -17,15 +17,16 @@ fix_class: policy.pin_bundle
 
 # The SDK emits bindings as trustabl.policy.binding EVENTS on invoke_agent
 # spans (spec/keys.json in agent-reliability-otel-labels), not as span
-# attributes on execute_tool spans. Two things are still open and need the
-# separate event-predicate proposal: reading an event field in a condition,
-# and comparing the sha256 per trustabl.policy.binding.id (without that, two
-# different bindings in one run would look like drift).
+# attributes. The sha256 is compared per binding id (see value_drift in
+# ../rule-ir-schema.yaml), so two different bindings in one run are not drift;
+# only the same binding id carrying two different hashes is.
 when:
   span: invoke_agent
   window: same_run_id
   condition:
     value_drift: trustabl.policy.binding.sha256
+    event: trustabl.policy.binding
+    per: trustabl.policy.binding.id
     across: invoke_agent_spans_in_run
 
 evidence:

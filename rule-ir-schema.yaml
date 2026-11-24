@@ -96,6 +96,55 @@ fields:
       knows how to translate; a condition shape with no translation yet
       simply isn't translatable until a pack adds support for it.
 
+  # --- Event predicates (v0.1) -------------------------------------------
+  # Conditions over span EVENTS, not span attributes. Defined here because the
+  # policy rules read trustabl.policy.binding events (one per bound policy).
+  # Only the three shapes the rules use are defined. Event attribute values
+  # are compared as strings, so a boolean is written true/false.
+
+  when.condition.absent_binding_type:
+    type: array of string
+    description: >
+      True when the span has NO trustabl.policy.binding event whose
+      trustabl.policy.binding.type is any of the listed types. Reading: none
+      of the listed types is present (not "at least one is missing"). A span
+      with no events at all is true.
+    example:
+      absent_binding_type: [sandbox, content_safety]
+    used_by: policy_absent, handoff_unbound
+
+  when.condition.absent_event:
+    type: object (name, where)
+    description: >
+      Reads event attributes in a condition. True when the span has no event
+      called `name` whose attributes ALL equal the values in `where` (every
+      pair must hold on the same event). absent_binding_type is the special
+      case where `where` tests only trustabl.policy.binding.type.
+    example:
+      absent_event:
+        name: trustabl.policy.binding
+        where:
+          trustabl.policy.binding.type: data_security
+          trustabl.policy.binding.required: true
+    used_by: dspm_unbound
+
+  when.condition.value_drift:
+    type: string (an attribute name)
+    description: >
+      True when the named value takes more than one distinct value across the
+      spans selected by `across`. By default the value is a span attribute
+      (see contract_drift). Two optional keys extend it to events: `event`
+      names the event whose attribute is read, and `per` names an event
+      attribute that groups the comparison, so each group is judged on its own
+      (two groups with different values are not drift; one group with two
+      values is). Without `per`, all values are pooled into one group.
+    example:
+      value_drift: trustabl.policy.binding.sha256
+      event: trustabl.policy.binding
+      per: trustabl.policy.binding.id
+      across: invoke_agent_spans_in_run
+    used_by: policy_drift, contract_drift
+
   evidence:
     type: array of string
     required: true

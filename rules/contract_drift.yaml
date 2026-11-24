@@ -15,16 +15,23 @@ title: Contract SHA changed mid-run
 severity: high
 fix_class: policy.pin_contract
 
+# The labels spec reserves these two as RESOURCE attributes, set by the
+# deployment through OTEL_RESOURCE_ATTRIBUTES (spec/keys.json not_emitted_here:
+# "trustabl.contract_id": "deployment, via OTEL_RESOURCE_ATTRIBUTES",
+# "trustabl.contract_hash": "deployment, via OTEL_RESOURCE_ATTRIBUTES").
+# A resource attribute is fixed for one process, so drift shows up as spans of
+# the same run carrying different resource values (for example a run that
+# crosses two services), not as one span changing.
 when:
   span: execute_tool
   window: same_run_id
   condition:
-    value_drift: trustabl.contract.sha256
+    value_drift: trustabl.contract_hash
     across: steps_in_run
 
 evidence:
-  - trustabl.contract.id
-  - trustabl.contract.sha256
+  - trustabl.contract_id
+  - trustabl.contract_hash
   - trustabl.run_id
   - trustabl.step_index
 
